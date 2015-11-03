@@ -818,7 +818,7 @@ static irqreturn_t vip_irq(int irq, void *data)
 		/* Disable acquisition */
 		reg_write(vip, DVP_CTL, reg_read(vip, DVP_CTL) & ~DVP_CTL_ENA);
 		/* Remove the active buffer from the list */
-		v4l2_get_timestamp(&vip->active->vb.timestamp);
+		vip->active->vb.vb2_buf.timestamp = ktime_get_ns();
 		vip->active->vb.sequence = vip->sequence++;
 		vb2_buffer_done(&vip->active->vb.vb2_buf, VB2_BUF_STATE_DONE);
 	}

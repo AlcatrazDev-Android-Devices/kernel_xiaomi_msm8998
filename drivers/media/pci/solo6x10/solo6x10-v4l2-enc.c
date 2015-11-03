@@ -531,8 +531,7 @@ static int solo_enc_fillbuf(struct solo_enc_dev *solo_enc,
 
 	if (!ret) {
 		vbuf->sequence = solo_enc->sequence++;
-		vbuf->timestamp.tv_sec = vop_sec(vh);
-		vbuf->timestamp.tv_usec = vop_usec(vh);
+		vb->timestamp = ktime_get_ns();
 
 		/* Check for motion flags */
 		if (solo_is_motion_on(solo_enc) && enc_buf->motion) {
