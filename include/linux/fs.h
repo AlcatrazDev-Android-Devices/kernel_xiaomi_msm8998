@@ -73,6 +73,8 @@ extern int sysctl_protected_hardlinks;
 extern int sysctl_protected_fifos;
 extern int sysctl_protected_regular;
 
+typedef __kernel_rwf_t rwf_t;
+
 struct buffer_head;
 typedef int (get_block_t)(struct inode *inode, sector_t iblock,
 			struct buffer_head *bh_result, int create);
@@ -1801,9 +1803,9 @@ extern ssize_t __vfs_write(struct file *, const char __user *, size_t, loff_t *)
 extern ssize_t vfs_read(struct file *, char __user *, size_t, loff_t *);
 extern ssize_t vfs_write(struct file *, const char __user *, size_t, loff_t *);
 extern ssize_t vfs_readv(struct file *, const struct iovec __user *,
-		unsigned long, loff_t *, int);
+		unsigned long, loff_t *, rwf_t);
 extern ssize_t vfs_writev(struct file *, const struct iovec __user *,
-		unsigned long, loff_t *, int);
+		unsigned long, loff_t *, rwf_t);
 
 struct super_operations {
    	struct inode *(*alloc_inode)(struct super_block *sb);
@@ -3026,7 +3028,7 @@ static inline int iocb_flags(struct file *file)
 	return res;
 }
 
-static inline int kiocb_set_rw_flags(struct kiocb *ki, int flags)
+static inline int kiocb_set_rw_flags(struct kiocb *ki, rwf_t flags)
 {
 	if (unlikely(flags & ~RWF_SUPPORTED))
 		return -EOPNOTSUPP;

@@ -30,7 +30,7 @@ const struct file_operations generic_ro_fops = {
 
 EXPORT_SYMBOL(generic_ro_fops);
 
-static inline int unsigned_offsets(struct file *file)
+static inline bool unsigned_offsets(struct file *file)
 {
 	return file->f_mode & FMODE_UNSIGNED_OFFSET;
 }
@@ -653,7 +653,7 @@ unsigned long iov_shorten(struct iovec *iov, unsigned long nr_segs, size_t to)
 EXPORT_SYMBOL(iov_shorten);
 
 static ssize_t do_iter_readv_writev(struct file *filp, struct iov_iter *iter,
-		loff_t *ppos, int type, int flags)
+		loff_t *ppos, int type, rwf_t flags)
 {
 	struct kiocb kiocb;
 	ssize_t ret;
@@ -675,7 +675,7 @@ static ssize_t do_iter_readv_writev(struct file *filp, struct iov_iter *iter,
 
 /* Do it by hand, with file-ops */
 static ssize_t do_loop_readv_writev(struct file *filp, struct iov_iter *iter,
-		loff_t *ppos, int type, int flags)
+		loff_t *ppos, int type, rwf_t flags)
 {
 	ssize_t ret = 0;
 
@@ -846,7 +846,7 @@ ssize_t vfs_readv(struct file *file, const struct iovec __user *vec,
 EXPORT_SYMBOL(vfs_readv);
 
 ssize_t vfs_writev(struct file *file, const struct iovec __user *vec,
-		   unsigned long vlen, loff_t *pos, int flags)
+		   unsigned long vlen, loff_t *pos, rwf_t flags)
 {
 	if (!(file->f_mode & FMODE_WRITE))
 		return -EBADF;
