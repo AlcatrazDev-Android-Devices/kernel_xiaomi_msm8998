@@ -202,5 +202,9 @@ int main(void)
 	DEVID_FIELD(hda_device_id, rev_id);
 	DEVID_FIELD(hda_device_id, api_version);
 
+	DEVID(typec_device_id);
+	DEVID_FIELD(typec_device_id, svid);
+	DEVID_FIELD(typec_device_id, mode);
+
 	return 0;
 }
