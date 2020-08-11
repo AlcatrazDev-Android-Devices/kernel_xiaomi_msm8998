@@ -93,5 +93,8 @@
 		qcom,mdss-pan-physical-height-dimension = <114>;
 		qcom,cont-splash-enabled;
 		qcom,mdss-dsi-tx-eot-append;
+		qcom,ulps-enabled;
+		qcom,suspend-ulps-enabled;
+		qcom,panel-allow-phy-poweroff;
 	};
 };
