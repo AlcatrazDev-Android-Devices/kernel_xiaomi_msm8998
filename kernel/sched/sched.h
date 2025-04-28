@@ -229,15 +229,16 @@ struct cfs_bandwidth {
 	u64 quota, runtime;
 	s64 hierarchical_quota;
 
-	short idle, period_active;
+	u8 idle;
+	u8 period_active;
+	u8 distribute_running;
+	u8 slack_started;
 	struct hrtimer period_timer, slack_timer;
 	struct list_head throttled_cfs_rq;
 
 	/* statistics */
 	int nr_periods, nr_throttled;
 	u64 throttled_time;
-
-	bool distribute_running;
 #endif
 };
 
@@ -317,6 +318,7 @@ extern int tg_nop(struct task_group *tg, void *data);
 
 extern void free_fair_sched_group(struct task_group *tg);
 extern int alloc_fair_sched_group(struct task_group *tg, struct task_group *parent);
+extern void online_fair_sched_group(struct task_group *tg);
 extern void unregister_fair_sched_group(struct task_group *tg);
 extern void init_tg_cfs_entry(struct task_group *tg, struct cfs_rq *cfs_rq,
 			struct sched_entity *se, int cpu,
@@ -527,7 +529,7 @@ struct cfs_rq {
 
 	u64 throttled_clock, throttled_clock_task;
 	u64 throttled_clock_task_time;
-	int throttled, throttle_count, throttle_uptodate;
+	int throttled, throttle_count;
 	struct list_head throttled_list;
 #endif /* CONFIG_CFS_BANDWIDTH */
 #endif /* CONFIG_FAIR_GROUP_SCHED */
@@ -2140,7 +2142,6 @@ extern void init_max_cpu_capacity(struct max_cpu_capacity *mcc);
 extern void update_group_capacity(struct sched_domain *sd, int cpu);
 
 extern void trigger_load_balance(struct rq *rq);
-extern void nohz_balance_clear_nohz_mask(int cpu);
 
 extern void idle_enter_fair(struct rq *this_rq);
 extern void idle_exit_fair(struct rq *this_rq);
@@ -2197,6 +2198,8 @@ static inline int idle_get_state_idx(struct rq *rq)
 	return -1;
 }
 #endif
+
+extern void schedule_idle(void);
 
 #ifdef CONFIG_SYSRQ_SCHED_DEBUG
 extern void sysrq_sched_debug_show(void);
@@ -2888,7 +2891,8 @@ DECLARE_PER_CPU(struct update_util_data *, cpufreq_update_util_data);
  */
 static inline void cpufreq_update_util(struct rq *rq, unsigned int flags)
 {
-        struct update_util_data *data;
+	struct update_util_data *data;
+	u64 clock;
 
 #ifdef CONFIG_SCHED_HMP
 	/*
@@ -2902,12 +2906,15 @@ static inline void cpufreq_update_util(struct rq *rq, unsigned int flags)
 		!(flags & SCHED_CPUFREQ_INTERCLUSTER_MIG))
 		return;
 	rq->load_reported_window = rq->window_start;
+	clock = sched_ktime_clock();
+#else
+	clock = rq_clock(rq);
 #endif
 
 		data = rcu_dereference_sched(*per_cpu_ptr(&cpufreq_update_util_data,
 						cpu_of(rq)));
         if (data)
-                data->func(data, rq_clock(rq), flags);
+                data->func(data, clock, flags);
 }
 
 static inline void cpufreq_update_this_cpu(struct rq *rq, unsigned int flags)

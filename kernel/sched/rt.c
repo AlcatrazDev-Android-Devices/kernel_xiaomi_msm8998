@@ -65,7 +65,15 @@ static void start_rt_bandwidth(struct rt_bandwidth *rt_b)
 	raw_spin_lock(&rt_b->rt_runtime_lock);
 	if (!rt_b->rt_period_active) {
 		rt_b->rt_period_active = 1;
-		hrtimer_forward_now(&rt_b->rt_period_timer, rt_b->rt_period);
+		/*
+		 * SCHED_DEADLINE updates the bandwidth, as a run away
+		 * RT task with a DL task could hog a CPU. But DL does
+		 * not reset the period. If a deadline task was running
+		 * without an RT task running, it can cause RT tasks to
+		 * throttle when they start up. Kick the timer right away
+		 * to update the period.
+		 */
+		hrtimer_forward_now(&rt_b->rt_period_timer, ns_to_ktime(0));
 		hrtimer_start_expires(&rt_b->rt_period_timer, HRTIMER_MODE_ABS_PINNED);
 	}
 	raw_spin_unlock(&rt_b->rt_runtime_lock);
@@ -1058,11 +1066,13 @@ static void update_curr_rt(struct rq *rq)
 	struct task_struct *curr = rq->curr;
 	struct sched_rt_entity *rt_se = &curr->rt;
 	u64 delta_exec;
+	u64 now;
 
 	if (curr->sched_class != &rt_sched_class)
 		return;
 
-	delta_exec = rq_clock_task(rq) - curr->se.exec_start;
+	now = rq_clock_task(rq);
+	delta_exec = now - curr->se.exec_start;
 	if (unlikely((s64)delta_exec <= 0))
 		return;
 
@@ -1075,7 +1085,7 @@ static void update_curr_rt(struct rq *rq)
 	curr->se.sum_exec_runtime += delta_exec;
 	account_group_exec_runtime(curr, delta_exec);
 
-	curr->se.exec_start = rq_clock_task(rq);
+	curr->se.exec_start = now;
 	cpuacct_charge(curr, delta_exec);
 
 	sched_rt_avg_update(rq, delta_exec);
@@ -2234,6 +2244,7 @@ static struct rq *find_lock_lowest_rq(struct task_struct *task, struct rq *rq)
 				     !cpumask_test_cpu(lowest_rq->cpu,
 						       tsk_cpus_allowed(task)) ||
 				     task_running(rq, task) ||
+				     !rt_task(task) ||
 				     !task_on_rq_queued(task))) {
 
 				double_unlock_balance(rq, lowest_rq);
@@ -2440,8 +2451,11 @@ static int rto_next_cpu(struct root_domain *rd)
 
 		rd->rto_cpu = cpu;
 
-		if (cpu < nr_cpu_ids)
+		if (cpu < nr_cpu_ids) {
+			if (!has_pushable_tasks(cpu_rq(cpu)))
+				continue;
 			return cpu;
+		}
 
 		rd->rto_cpu = -1;
 
