@@ -133,50 +133,82 @@ static struct configfs_item_operations uvcg_config_item_ops = {
 	.release	= uvcg_config_item_release,
 };
 
-static int uvcg_config_create_group(struct config_group *parent,
-				    struct uvcg_config_group_type *type);
-
 static int uvcg_config_create_children(struct config_group *group,
-				struct uvcg_config_group_type *type)
+				       struct uvcg_config_group_type *type)
 {
-	struct uvcg_config_group_type **child;
-	int ret;
+	struct uvcg_config_group_type **child_type;
+	struct config_group *child_group;
+	int count = 0;
+	int i = 0;
+	int ret = 0;
 
 	if (type->create_children)
 		return type->create_children(group);
 
-	for (child = type->children; child && *child; ++child) {
-		ret = uvcg_config_create_group(group, *child);
-		if (ret < 0)
-			return ret;
-	}
+	if (!type->children)
+		return 0;
 
-	return 0;
-}
+	for (child_type = type->children; *child_type; ++child_type)
+		count++;
 
-static int uvcg_config_create_group(struct config_group *parent,
-				    struct uvcg_config_group_type *type)
-{
-	struct config_group *group;
+	if (!count)
+		return 0;
 
-	group = kzalloc(sizeof(*group), GFP_KERNEL);
-	if (!group)
+	group->default_groups = kzalloc(sizeof(struct config_group *) * (count + 1),
+					GFP_KERNEL);
+	if (!group->default_groups)
 		return -ENOMEM;
 
-	config_group_init_type_name(group, type->name, &type->type);
-	configfs_add_default_group(group, parent);
+	for (child_type = type->children; *child_type; ++child_type, ++i) {
+		child_group = kzalloc(sizeof(*child_group), GFP_KERNEL);
+		if (!child_group) {
+			ret = -ENOMEM;
+			goto fail;
+		}
 
-	return uvcg_config_create_children(group, type);
+		config_group_init_type_name(child_group, (*child_type)->name,
+					    &(*child_type)->type);
+		group->default_groups[i] = child_group;
+
+		ret = uvcg_config_create_children(child_group, *child_type);
+		if (ret)
+			goto fail;
+	}
+
+	group->default_groups[count] = NULL;
+
+	return 0;
+
+fail:
+	for (i = 0; group->default_groups[i]; ++i) {
+		if (group->default_groups[i]->default_groups) {
+			struct uvcg_config_group_type **ct;
+			int j = 0;
+			for (ct = type->children; *ct; ++ct, ++j) {
+				if (j == i) {
+					break;
+				}
+			}
+		}
+		kfree(group->default_groups[i]);
+	}
+	kfree(group->default_groups);
+	group->default_groups = NULL;
+	return ret;
 }
 
 static void uvcg_config_remove_children(struct config_group *group)
 {
-	struct config_group *child, *n;
+	struct config_group **child_ptr;
 
-	list_for_each_entry_safe(child, n, &group->default_groups, group_entry) {
-		list_del(&child->group_entry);
-		uvcg_config_remove_children(child);
-		config_item_put(&child->cg_item);
+	if (group->default_groups) {
+		for (child_ptr = group->default_groups; *child_ptr; ++child_ptr) {
+			struct config_group *child = *child_ptr;
+			uvcg_config_remove_children(child);
+			config_item_put(&child->cg_item);
+		}
+		kfree(group->default_groups);
+		group->default_groups = NULL;
 	}
 }
 
@@ -902,23 +934,36 @@ static struct config_item_type uvcg_control_class_type = {
 static int uvcg_control_class_create_children(struct config_group *parent)
 {
 	static const char * const names[] = { "fs", "ss" };
-	unsigned int i;
+	const int count = ARRAY_SIZE(names);
+	struct uvcg_control_class_group *group;
+	int i;
 
-	for (i = 0; i < ARRAY_SIZE(names); ++i) {
-		struct uvcg_control_class_group *group;
+	parent->default_groups = kzalloc(sizeof(struct config_group *) * (count + 1),
+					 GFP_KERNEL);
+	if (!parent->default_groups)
+		return -ENOMEM;
 
+	for (i = 0; i < count; ++i) {
 		group = kzalloc(sizeof(*group), GFP_KERNEL);
 		if (!group)
-			return -ENOMEM;
+			goto fail;
 
 		group->name = names[i];
-
 		config_group_init_type_name(&group->group, group->name,
 					    &uvcg_control_class_type);
-		configfs_add_default_group(&group->group, parent);
+
+		parent->default_groups[i] = &group->group;
 	}
 
 	return 0;
+
+fail:
+	for (i = 0; parent->default_groups[i]; ++i)
+		kfree(container_of(parent->default_groups[i],
+				   struct uvcg_control_class_group, group));
+	kfree(parent->default_groups);
+	parent->default_groups = NULL;
+	return -ENOMEM;
 }
 
 static struct uvcg_config_group_type uvcg_control_class_grp_type = {
@@ -2278,9 +2323,17 @@ static int uvcg_color_matching_create_children(struct config_group *parent)
 {
 	struct uvcg_color_matching *color_match;
 
-	color_match = kzalloc(sizeof(*color_match), GFP_KERNEL);
-	if (!color_match)
+	parent->default_groups = kzalloc(sizeof(struct config_group *) * 2,
+					 GFP_KERNEL);
+	if (!parent->default_groups)
 		return -ENOMEM;
+
+	color_match = kzalloc(sizeof(*color_match), GFP_KERNEL);
+	if (!color_match) {
+		kfree(parent->default_groups);
+		parent->default_groups = NULL;
+		return -ENOMEM;
+	}
 
 	color_match->desc.bLength = UVC_DT_COLOR_MATCHING_SIZE;
 	color_match->desc.bDescriptorType = USB_DT_CS_INTERFACE;
@@ -2291,7 +2344,8 @@ static int uvcg_color_matching_create_children(struct config_group *parent)
 
 	config_group_init_type_name(&color_match->group, "default",
 				    &uvcg_color_matching_type);
-	configfs_add_default_group(&color_match->group, parent);
+	
+	parent->default_groups[0] = &color_match->group;
 
 	return 0;
 }
@@ -2682,23 +2736,36 @@ static struct config_item_type uvcg_streaming_class_type = {
 static int uvcg_streaming_class_create_children(struct config_group *parent)
 {
 	static const char * const names[] = { "fs", "hs", "ss" };
-	unsigned int i;
+	const int count = ARRAY_SIZE(names);
+	struct uvcg_streaming_class_group *group;
+	int i;
 
-	for (i = 0; i < ARRAY_SIZE(names); ++i) {
-		struct uvcg_streaming_class_group *group;
+	parent->default_groups = kzalloc(sizeof(struct config_group *) * (count + 1),
+					 GFP_KERNEL);
+	if (!parent->default_groups)
+		return -ENOMEM;
 
+	for (i = 0; i < count; ++i) {
 		group = kzalloc(sizeof(*group), GFP_KERNEL);
 		if (!group)
-			return -ENOMEM;
+			goto fail;
 
 		group->name = names[i];
-
 		config_group_init_type_name(&group->group, group->name,
 					    &uvcg_streaming_class_type);
-		configfs_add_default_group(&group->group, parent);
+
+		parent->default_groups[i] = &group->group;
 	}
 
 	return 0;
+
+fail:
+	for (i = 0; parent->default_groups[i]; ++i)
+		kfree(container_of(parent->default_groups[i],
+				   struct uvcg_streaming_class_group, group));
+	kfree(parent->default_groups);
+	parent->default_groups = NULL;
+	return -ENOMEM;
 }
 
 static struct uvcg_config_group_type uvcg_streaming_class_grp_type = {

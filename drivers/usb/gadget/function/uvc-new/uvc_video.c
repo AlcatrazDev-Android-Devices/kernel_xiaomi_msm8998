@@ -24,13 +24,21 @@
  * Video codecs
  */
 
+static inline struct timespec64 timeval_to_timespec64(const struct timeval *tv)
+{
+    return (struct timespec64) {
+        .tv_sec = tv->tv_sec,
+        .tv_nsec = tv->tv_usec * 1000
+    };
+}
+
 static int
 uvc_video_encode_header(struct uvc_video *video, struct uvc_buffer *buf,
 		u8 *data, int len)
 {
 	struct uvc_device *uvc = container_of(video, struct uvc_device, video);
 	struct usb_composite_dev *cdev = uvc->func.config->cdev;
-	struct timespec64 ts = ns_to_timespec64(buf->buf.vb2_buf.timestamp);
+	struct timespec64 ts = timeval_to_timespec64(&buf->buf.timestamp);
 	int pos = 2;
 
 	data[1] = UVC_STREAM_EOH | video->fid;
