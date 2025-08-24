@@ -249,19 +249,17 @@ static int sde_rotator_validate_item(struct sde_rotator_ctx *ctx,
 /*
  * sde_rotator_queue_setup - vb2_ops queue_setup callback.
  * @q: Pointer to vb2 queue struct.
- * @parg: Pointer to v4l2 format struct (NULL is valid argument).
  * @num_buffers: Pointer of number of buffers requested.
  * @num_planes: Pointer to number of planes requested.
  * @sizes: Array containing sizes of planes.
  * @alloc_ctxs: Array of allocated contexts for each plane.
  */
 static int sde_rotator_queue_setup(struct vb2_queue *q,
-	const void *parg,
 	unsigned int *num_buffers, unsigned int *num_planes,
 	unsigned int sizes[], void *alloc_ctxs[])
 {
 	struct sde_rotator_ctx *ctx = vb2_get_drv_priv(q);
-	const struct v4l2_format *fmt = parg;
+	const struct v4l2_format *fmt = NULL;
 	int i;
 
 	if (!num_buffers)

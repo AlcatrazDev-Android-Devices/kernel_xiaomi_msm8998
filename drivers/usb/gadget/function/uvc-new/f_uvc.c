@@ -765,13 +765,6 @@ uvc_function_bind(struct usb_configuration *c, struct usb_function *f)
 		goto error;
 	}
 
-	f->ssp_descriptors = uvc_copy_descriptors(uvc, USB_SPEED_SUPER_PLUS);
-	if (IS_ERR(f->ssp_descriptors)) {
-		ret = PTR_ERR(f->ssp_descriptors);
-		f->ssp_descriptors = NULL;
-		goto error;
-	}
-
 	/* Preallocate control endpoint request. */
 	uvc->control_req = usb_ep_alloc_request(cdev->gadget->ep0, GFP_KERNEL);
 	uvc->control_buf = kmalloc(UVC_MAX_REQUEST_SIZE, GFP_KERNEL);

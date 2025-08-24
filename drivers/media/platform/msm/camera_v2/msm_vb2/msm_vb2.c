@@ -14,7 +14,6 @@
 #include "msm_vb2.h"
 
 static int msm_vb2_queue_setup(struct vb2_queue *q,
-	const void *parg,
 	unsigned int *num_buffers, unsigned int *num_planes,
 	unsigned int sizes[], void *alloc_ctxs[])
 {
@@ -448,7 +447,9 @@ static int msm_vb2_buf_done(struct vb2_v4l2_buffer *vb, int session_id,
 		/* put buf before buf done */
 		if (msm_vb2->in_freeq) {
 			vb2_v4l2_buf->sequence = sequence;
-			vb2_v4l2_buf->timestamp = *ts;
+			vb2_v4l2_buf->vb2_buf.timestamp = 
+				((u64)ts->tv_sec * 1000000 +
+				ts->tv_usec) * 1000;
 			vb2_buffer_done(&vb2_v4l2_buf->vb2_buf,
 				VB2_BUF_STATE_DONE);
 			msm_vb2->in_freeq = 0;
@@ -509,7 +510,9 @@ static int msm_vb2_buf_error(struct vb2_v4l2_buffer *vb, int session_id,
 		/* put buf before buf done */
 		if (msm_vb2->in_freeq) {
 			vb2_v4l2_buf->sequence = sequence;
-			vb2_v4l2_buf->timestamp = *ts;
+			vb2_v4l2_buf->vb2_buf.timestamp = 
+				((u64)ts->tv_sec * 1000000 +
+				ts->tv_usec) * 1000;
 			vb2_buffer_done(&vb2_v4l2_buf->vb2_buf,
 				VB2_BUF_STATE_ERROR);
 			msm_vb2->in_freeq = 0;

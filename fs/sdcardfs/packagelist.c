@@ -832,7 +832,6 @@ static struct configfs_subsystem sdcardfs_packages = {
 			.ci_namebuf = "sdcardfs",
 			.ci_type = &packages_type,
 		},
-		.default_groups = sd_default_groups,
 	},
 };
 

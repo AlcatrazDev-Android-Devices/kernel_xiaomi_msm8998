@@ -1602,7 +1602,6 @@ static void msm_venc_register_extradata(
 }
 
 static int msm_venc_queue_setup(struct vb2_queue *q,
-				const void *parg,
 				unsigned int *num_buffers,
 				unsigned int *num_planes, unsigned int sizes[],
 				void *alloc_ctxs[])

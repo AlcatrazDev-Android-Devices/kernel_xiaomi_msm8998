@@ -2152,8 +2152,7 @@ static void handle_fbd(enum hal_command_response cmd, void *data)
 					fill_buf_done->timestamp_hi,
 					fill_buf_done->timestamp_lo);
 		}
-		vbuf->timestamp =
-			ns_to_timeval(time_usec * NSEC_PER_USEC);
+		vb->timestamp = time_usec * NSEC_PER_USEC;
 		vbuf->flags = 0;
 		extra_idx =
 			EXTRADATA_IDX(inst->prop.num_planes[CAPTURE_PORT]);
@@ -2273,7 +2272,7 @@ static void handle_seq_hdr_done(enum hal_command_response cmd, void *data)
 	vb->planes[0].data_offset = fill_buf_done->offset1;
 
 	vbuf->flags = V4L2_QCOM_BUF_FLAG_CODECCONFIG;
-	vbuf->timestamp = ns_to_timeval(0);
+	vb->timestamp = 0;
 
 	dprintk(VIDC_DBG, "Filled length = %d; offset = %d; flags %x\n",
 				vb->planes[0].bytesused,
@@ -3647,7 +3646,7 @@ static void populate_frame_data(struct vidc_frame_data *data,
 		OUTPUT_PORT : CAPTURE_PORT;
 	struct vb2_v4l2_buffer *vbuf = to_vb2_v4l2_buffer(vb);
 
-	time_usec = timeval_to_ns(&vbuf->timestamp);
+	time_usec = vb->timestamp;
 	do_div(time_usec, NSEC_PER_USEC);
 
 	data->alloc_len = vb->planes[0].length;

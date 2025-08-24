@@ -174,12 +174,11 @@ static int msm_fd_fill_format_from_ctx(struct v4l2_format *f, struct fd_ctx *c)
  * @alloc_ctxs: Array of allocated contexts for each plane.
  */
 static int msm_fd_queue_setup(struct vb2_queue *q,
-	const void *parg,
 	unsigned int *num_buffers, unsigned int *num_planes,
 	unsigned int sizes[], void *alloc_ctxs[])
 {
 	struct fd_ctx *ctx = vb2_get_drv_priv(q);
-	const struct v4l2_format *fmt = parg;
+	const struct v4l2_format *fmt = NULL;
 
 	*num_planes = 1;
 

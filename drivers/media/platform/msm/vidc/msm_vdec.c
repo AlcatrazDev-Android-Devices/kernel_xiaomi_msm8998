@@ -1446,7 +1446,6 @@ static int set_actual_buffer_count(struct msm_vidc_inst *inst,
 }
 
 static int msm_vdec_queue_setup(struct vb2_queue *q,
-				const void *parg,
 				unsigned int *num_buffers,
 				unsigned int *num_planes, unsigned int sizes[],
 				void *alloc_ctxs[])

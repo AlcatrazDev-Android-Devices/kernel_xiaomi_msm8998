@@ -312,12 +312,11 @@ static int msm_jpegdma_update_hw_config(struct jpegdma_ctx *ctx)
  * @alloc_ctxs: Array of allocated contexts for each plane.
  */
 static int msm_jpegdma_queue_setup(struct vb2_queue *q,
-	const void *parg,
 	unsigned int *num_buffers, unsigned int *num_planes,
 	unsigned int sizes[], void *alloc_ctxs[])
 {
 	struct jpegdma_ctx *ctx = vb2_get_drv_priv(q);
-	struct v4l2_format *fmt = (struct v4l2_format *)parg;
+	struct v4l2_format *fmt = NULL;
 
 	if (NULL == fmt) {
 		switch (q->type) {
