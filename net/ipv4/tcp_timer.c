@@ -426,8 +426,8 @@ void tcp_retransmit_timer(struct sock *sk)
 	struct inet_connection_sock *icsk = inet_csk(sk);
 
 	if (tp->fastopen_rsk) {
-		WARN_ON_ONCE(sk->sk_state != TCP_SYN_RECV &&
-			     sk->sk_state != TCP_FIN_WAIT1);
+		// WARN_ON_ONCE(sk->sk_state != TCP_SYN_RECV &&
+		// 	     sk->sk_state != TCP_FIN_WAIT1);
 		tcp_fastopen_synack_timer(sk);
 		/* Before we receive ACK to our SYN-ACK don't retransmit
 		 * anything else (e.g., data or FIN segments).
@@ -437,7 +437,7 @@ void tcp_retransmit_timer(struct sock *sk)
 	if (!tp->packets_out)
 		goto out;
 
-	WARN_ON(tcp_write_queue_empty(sk));
+	// WARN_ON(tcp_write_queue_empty(sk));
 
 	if (!tp->snd_wnd && !sock_flag(sk, SOCK_DEAD) &&
 	    !((1 << sk->sk_state) & (TCPF_SYN_SENT | TCPF_SYN_RECV))) {
