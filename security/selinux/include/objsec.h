@@ -54,6 +54,9 @@ struct inode_security_struct {
 	u32 tag;		/* Per-File-Encryption tag */
 	void *pfk_data; /* Per-File-Key data from ecryptfs */
 	struct mutex lock;
+#ifdef CONFIG_KSU
+	bool on_head;
+#endif
 };
 
 struct file_security_struct {
